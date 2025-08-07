@@ -18,16 +18,21 @@ app.post('/api/generate', async (req, res) => {
   const configuration = new Configuration({ apiKey: process.env.OPENAI_API_KEY });
   const openai = new OpenAIApi(configuration);
 
-  const prompt = `Create a detailed business analysis for the following idea.\n\nBusiness Idea: ${idea}\n\nProvide:\n1. SWOT analysis\n2. Pricing model suggestions\n3. Go-to-market channels`;
+  const messages = [
+    {
+      role: 'user',
+      content: `Create a detailed business analysis for the following idea.\n\nBusiness Idea: ${idea}\n\nProvide:\n1. SWOT analysis\n2. Pricing model suggestions\n3. Go-to-market channels`,
+    },
+  ];
 
   try {
-    const response = await openai.createCompletion({
-      model: 'text-davinci-003',
-      prompt,
+    const response = await openai.createChatCompletion({
+      model: 'gpt-3.5-turbo',
+      messages,
       max_tokens: 500,
       temperature: 0.7,
     });
-    res.json({ text: response.data.choices[0].text.trim() });
+    res.json({ text: response.data.choices[0].message.content.trim() });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
