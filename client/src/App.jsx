@@ -1,38 +1,42 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
+import DOMPurify from 'dompurify';
+import Layout from './components/Layout.jsx';
+import IdeaForm from './components/IdeaForm.jsx';
+import ResultCard from './components/ResultCard.jsx';
+import Loader from './components/Loader.jsx';
+import ErrorAlert from './components/ErrorAlert.jsx';
+
+const HistoryPanel = lazy(() => import('./components/HistoryPanel.jsx'));
 
 export default function App() {
-  const [idea, setIdea] = useState('');
   const [result, setResult] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setResult('Loading...');
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idea })
-      });
-      const data = await response.json();
-      setResult(data.text);
-    } catch (err) {
-      setResult('Error: ' + err.message);
-    }
+  const handleResult = (text) => {
+    const clean = DOMPurify.sanitize(text);
+    setResult(clean);
+    const stored = JSON.parse(localStorage.getItem('history') || '[]');
+    const updated = [clean, ...stored].slice(0, 10);
+    localStorage.setItem('history', JSON.stringify(updated));
   };
 
+  const toggleHistory = () => setHistoryOpen((x) => !x);
+
   return (
-    <div>
-      <h1>Biz Model Generator</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={idea}
-          onChange={(e) => setIdea(e.target.value)}
-          placeholder="Describe your business idea"
-        />
-        <button type="submit">Generate</button>
-      </form>
-      <pre>{result}</pre>
-    </div>
+    <Layout
+      history={
+        <Suspense fallback={<div />}>
+          <HistoryPanel isOpen={historyOpen} onClose={toggleHistory} />
+        </Suspense>
+      }
+      toggleHistory={toggleHistory}
+    >
+      <ErrorAlert message={error} />
+      <IdeaForm onResult={handleResult} onError={setError} setLoading={setLoading} />
+      {loading && <Loader />}
+      {result && <ResultCard result={result} />}
+    </Layout>
   );
 }

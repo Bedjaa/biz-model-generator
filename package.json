@@ -1,0 +1,21 @@
+{
+  "name": "biz-model-generator",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "lint": "npm -w server run lint && npm -w client run lint",
+    "test": "npm -w server test && npm -w client test",
+    "build": "npm -w server run build && npm -w client run build",
+    "audit": "npm -w server audit && npm -w client audit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "jsdom": "^26.1.0"
+  }
+}
