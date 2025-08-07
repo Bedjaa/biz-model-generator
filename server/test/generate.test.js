@@ -6,7 +6,7 @@ const OpenAI = require('openai');
 
 fs.writeFileSync(
   path.join(__dirname, '..', '.env'),
-  'OPENAI_API_KEY=test\nCLIENT_ORIGIN=http://localhost\nSENTRY_DSN=test\n'
+  'OPENAI_API_KEY=test\nCLIENT_ORIGIN=http://localhost\nALLOW_DEV_ORIGIN=true\nSENTRY_DSN=\n'
 );
 
 afterAll(() => {
