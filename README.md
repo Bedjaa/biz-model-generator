@@ -50,3 +50,14 @@ cp server/.env.example server/.env
 cd server && npm install && npm start &
 cd ../client && npm install && npm run dev
 ```
+
+## Running tests
+
+Both the server and client include placeholder test scripts. From the project root run:
+
+```bash
+cd server && npm test
+cd ../client && npm test
+```
+
+These commands currently print "No tests" and exit with an error code until real tests are added.
