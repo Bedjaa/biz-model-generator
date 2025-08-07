@@ -4,11 +4,11 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv-safe');
 const { z } = require('zod');
-const sanitizeHtml = require('sanitize-html');
 const Sentry = require('@sentry/node');
 const OpenAI = require('openai');
+const sanitize = require('./utils/sanitize');
 
-dotenv.config();
+dotenv.config({ allowEmptyValues: true });
 
 Sentry.init({ dsn: process.env.SENTRY_DSN || '' });
 
@@ -25,9 +25,18 @@ app.use(
   })
 );
 
+const allowedOrigins = (process.env.CLIENT_ORIGIN || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN,
+    origin: (origin, cb) => {
+      if (process.env.ALLOW_DEV_ORIGIN === 'true') return cb(null, true);
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error('Not allowed'), false);
+    },
     methods: ['POST'],
   })
 );
@@ -42,7 +51,7 @@ const ideaSchema = z.object({ idea: z.string().trim().min(1).max(500) });
 app.post('/api/generate', async (req, res, next) => {
   try {
     const { idea } = ideaSchema.parse(req.body);
-    const cleanIdea = sanitizeHtml(idea);
+    const cleanIdea = sanitize(idea);
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const messages = [
       {
@@ -56,16 +65,17 @@ app.post('/api/generate', async (req, res, next) => {
       max_tokens: 500,
       temperature: 0.7,
     });
-    const text = sanitizeHtml(response.choices[0].message.content.trim());
+    const text = sanitize(response.choices[0].message.content.trim());
     res.json({ text });
   } catch (error) {
     next(error);
   }
 });
 
-app.use((err, req, res) => {
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   Sentry.captureException(err);
-  res.status(500).json({ error: 'Internal server error' });
+  const status = err instanceof z.ZodError ? 400 : 500;
+  res.status(status).json({ error: status === 400 ? 'Invalid request' : 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 3001;
