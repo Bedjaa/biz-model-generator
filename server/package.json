@@ -4,7 +4,8 @@
   "description": "Express backend for generating business model analyses with OpenAI",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "echo \"No tests\" && exit 1"
   },
   "dependencies": {
     "cors": "^2.8.5",
