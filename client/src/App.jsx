@@ -1,42 +1,60 @@
-import { useState, lazy, Suspense } from 'react';
-import DOMPurify from 'dompurify';
-import Layout from './components/Layout.jsx';
-import IdeaForm from './components/IdeaForm.jsx';
-import ResultCard from './components/ResultCard.jsx';
-import Loader from './components/Loader.jsx';
-import ErrorAlert from './components/ErrorAlert.jsx';
-
-const HistoryPanel = lazy(() => import('./components/HistoryPanel.jsx'));
+import { useState } from 'react';
 
 export default function App() {
+  const [idea, setIdea] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [historyOpen, setHistoryOpen] = useState(false);
 
-  const handleResult = (text) => {
-    const clean = DOMPurify.sanitize(text);
-    setResult(clean);
-    const stored = JSON.parse(localStorage.getItem('history') || '[]');
-    const updated = [clean, ...stored].slice(0, 10);
-    localStorage.setItem('history', JSON.stringify(updated));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setResult('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idea }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate');
+      setResult(data.text);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleHistory = () => setHistoryOpen((x) => !x);
-
   return (
-    <Layout
-      history={
-        <Suspense fallback={<div />}>
-          <HistoryPanel isOpen={historyOpen} onClose={toggleHistory} />
-        </Suspense>
-      }
-      toggleHistory={toggleHistory}
-    >
-      <ErrorAlert message={error} />
-      <IdeaForm onResult={handleResult} onError={setError} setLoading={setLoading} />
-      {loading && <Loader />}
-      {result && <ResultCard result={result} />}
-    </Layout>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <div className="mx-auto max-w-2xl p-6">
+        <h1 className="mb-4 text-center text-3xl font-bold">Business Model Generator</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <textarea
+            className="w-full rounded-md border p-3"
+            placeholder="Describe your business idea..."
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            maxLength={500}
+            required
+          />
+          <button
+            type="submit"
+            className="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? 'Generating...' : 'Generate'}
+          </button>
+        </form>
+        {error && <p className="mt-4 text-red-600">{error}</p>}
+        {result && (
+          <div className="mt-6 whitespace-pre-line rounded-md bg-white p-4 shadow">
+            {result}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
